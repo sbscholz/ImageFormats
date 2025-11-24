@@ -1,0 +1,71 @@
+module PNG;
+
+use Color8: all;
+use String: { string, sprintf };
+use File: { File, mkstemp };
+use Process: { system };
+
+provide all;
+
+external int imshow(Color8[.,.] array);
+    #pragma linkobj "src/PNG/imshow.o"
+    #pragma linkwith "png"
+    #pragma refcounting [1]
+
+external Color8[.,.] readPNG(string NAME);
+    #pragma effect FileSystem::TheFileSystem
+    #pragma linkobj "src/PNG/png2array.o"
+    #pragma linkname "SAC_PNG_png2array"
+    #pragma linkwith "png"
+    #pragma linkwith "z"
+    #pragma refcounting[0]
+    /*
+     * Read a PNG file from the file NAME.
+     */
+
+external int writePNG(string NAME, Color8[.,.] array);
+    #pragma effect FileSystem::TheFileSystem
+    #pragma linkobj "src/PNG/array2png.o"
+    #pragma linkname "SAC_PNG_array2png"
+    #pragma linkwith "png"
+    #pragma linkwith "z"
+    #pragma refcounting[2]
+    /*
+     * Save 2D Color8 array to PNG file NAME.
+     */
+
+external int writePNG(File FILE, Color8[.,.] array);
+    #pragma effect FileSystem::TheFileSystem
+    #pragma linkobj "src/PNG/array2png.o"
+    #pragma linkname "SAC_PNG_array2png_file"
+    #pragma linkwith "png"
+    #pragma linkwith "z"
+    #pragma refcounting[2]
+    /*
+     * Save 2D Color8 array to PNG file FILE.
+     */
+
+external int printPNG (Color8[.,.] array);
+    #pragma effect TermFile::stdout
+    #pragma linkobj "src/PNG/array2png.o"
+    #pragma linkname "SAC_PNG_array2png_stdout"
+    #pragma linkwith "png"
+    #pragma linkwith "z"
+    #pragma refcounting[1]
+    /*
+     * Save 2D Color8 array to PNG file FILE.
+     */
+
+/*
+ * Save Color8 image to PNG and visualize it somehow.
+ */
+int showPNG(Color8[.,.] array)
+{
+    _, file, name = mkstemp("showpng_XXXXXX");
+    ret = writePNG(file, array);
+    cmd = sprintf("(display '%s' || xv '%s' || firefox '%s')",
+                  name, name, name);
+    _ = system(cmd);
+
+    return ret;
+}

@@ -1,0 +1,49 @@
+module JPEG;
+
+use Color8:       { Color8, shape };
+use File:         { File, fopen, fclose };
+use RuntimeError: { error };
+use ScalarArith:  { == };
+use String:       { string };
+
+export {readJPEG, writeJPEG};
+
+external Color8[.,.] readJPEGFile( File &stream );
+    #pragma effect FileSystem::TheFileSystem
+    #pragma linkobj "JPEG/jpeg.o"
+    #pragma linkname "SAC_JPEG_jpeg2array"
+    #pragma linkwith "jpeg"
+    #pragma refcounting[0]
+
+external void writeJPEGFile( File &stream , Color8[.,.] image, int[2] shp, int quality);
+    #pragma effect FileSystem::TheFileSystem
+    #pragma linkobj "JPEG/jpeg.o"
+    #pragma linkname "SAC_JPEG_array2jpeg"
+    #pragma linkwith "jpeg"
+
+inline
+Color8[.,.] readJPEG( string name)
+{
+  err, fp = fopen( name, "rb");
+  if ( SysErr::fail(err) == true) {
+    error( (int)err, "Error occured when trying to open file %s for reading",
+           name);
+  }
+
+  ret = readJPEGFile( fp);
+  fclose( fp);
+  return( ret);
+}
+
+inline
+void writeJPEG( Color8[.,.] img, string name, int quality)
+{
+  err, fp = fopen( name, "wb+");
+  if ( SysErr::fail(err) == true) {
+    error( (int)err, "Error occured when trying to open file %s for writing",
+           name);
+  }
+
+  writeJPEGFile( fp, img, shape(img), quality);
+  fclose( fp);
+}

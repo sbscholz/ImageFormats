@@ -3,15 +3,21 @@ INCLUDE ("${CMAKE_SOURCE_DIR}/cmake-common/generate-sac2c-dependency-targets.cma
 
 # C files
 SET (C_DEPS_SRC
+    src/JPEG/jpeg.c
     src/PGM/array2pgm.c
     src/PGM/pgm2array.c
+    src/PNG/array2png.c
+    src/PNG/imshow.c
+    src/PNG/png2array.c
     src/PPM/array2ppm.c
     src/PPM/ppm2array.c
 )
 
 # SaC files
 SET (SAC_SRC
+    JPEG.sac
     PGM.sac
+    PNG.sac
     PPM.sac
 )
 

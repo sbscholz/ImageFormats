@@ -1,12 +1,17 @@
+# SaC Image Formats
 
-The project uses `cmake-common`, and so upon cloning this repo
-it is important you call this before running cmake:
+The project uses `cmake-common`.
+Upon cloning this repo it is important initialize submodules:
 
 ```
 git submodule update --init --recursive
 ```
 
+Then build the library using `make`:
+
 ```
-cmake -B build
-cmake --build build -- -j
+mkdir build
+cd build
+cmake -DTARGETS="<targets>" ..
+make
 ```
