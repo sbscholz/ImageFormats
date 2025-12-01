@@ -13,5 +13,7 @@ jobs:
           submodules: 'recursive'
       - name: Configure sac2c
         run: cp -r /root/.sac2crc $HOME/.sac2crc
+      - name: Install dependencies
+        run: apt install -y libjpeg-dev libpng-dev
       - name: Build
         run: make
