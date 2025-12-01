@@ -16,7 +16,10 @@ INCLUDE ("cmake-common/check-sac2c.cmake")
 INCLUDE ("cmake-common/check-sac2c-feature-support.cmake")
 INCLUDE ("cmake-common/misc-macros.cmake")
 
-# Check if sac2c suppports building generically
+# TODO: check if lib-jpegdev and lib-pngdev are installed. Depending on whether
+# each is installed, conditionally compile the JPEG or PNG library.
+
+# Check if sac2c supports building generically
 IF (BUILDGENERIC)
     CHECK_SAC2C_SUPPORT_FLAG ("generic" "-generic")
     IF (HAVE_FLAG_generic)
