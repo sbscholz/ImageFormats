@@ -7,7 +7,7 @@ use Array: { shape };
 use File: { File, fopen, fclose };
 use SysErr: { fail };
 use ScalarArith: { ==, > };
-use ArrayTransform: { maxval };
+use Array: { maxval };
 
 export all;
 

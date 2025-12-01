@@ -11,6 +11,7 @@ SET (SAC2C_EXEC                       CACHE STRING "A path to sac2c compiler")
 OPTION (BUILDGENERIC "Do not use architecture specific optimisations (useful for package builds)" OFF)
 
 # Check whether sac2c is operational
+LIST (APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake-common")
 INCLUDE ("cmake-common/check-sac2c.cmake")
 INCLUDE ("cmake-common/check-sac2c-feature-support.cmake")
 INCLUDE ("cmake-common/misc-macros.cmake")

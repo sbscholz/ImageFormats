@@ -10,6 +10,7 @@ provide all;
 external int imshow(Color8[.,.] array);
     #pragma linkobj "src/PNG/imshow.o"
     #pragma linkwith "png"
+    #pragma linksign [1,2]
     #pragma refcounting [1]
 
 external Color8[.,.] readPNG(string NAME);
@@ -18,7 +19,8 @@ external Color8[.,.] readPNG(string NAME);
     #pragma linkname "SAC_PNG_png2array"
     #pragma linkwith "png"
     #pragma linkwith "z"
-    #pragma refcounting[0]
+    #pragma linksign [1,2]
+    #pragma refcounting [0]
     /*
      * Read a PNG file from the file NAME.
      */
