@@ -1,42 +1,20 @@
 module PPM;
 
-use Color8: { Color8, dim, shape };
-use File: { File, fopen, fclose };
-use ScalarArith: { == };
-use String: { string };
-use TermFile: { TermFile, stdin, stdout };
+use Structures: all;
+import File: all;
+import TermFile: all;
 
-export { readPPM, printPPM };
+export { readPPM, writePPM };
 
-external Color8[.,.] readStream(TermFile &stream);
-    #pragma effect Terminal::TheTerminal
-    #pragma linkobj "src/PPM/ppm2array.o"
-    #pragma linkname "SAC_PPM_ppm2array"
-    #pragma refcounting [0]
-    #pragma linksign [1,2]
-
-external Color8[.,.] readStream(File &stream);
-    #pragma effect FileSystem::TheFileSystem
-    #pragma linkobj "src/PPM/ppm2array.o"
-    #pragma linkname "SAC_PPM_ppm2array"
-    #pragma refcounting [0]
-    #pragma linksign [1,2]
-
-external void writeStream(TermFile &stream, Color8[.,.] image,
-                          int[2] shp, bool binary);
-    #pragma effect Terminal::TheTerminal
-    #pragma linkobj "src/PPM/array2ppm.o"
-    #pragma linkname "SAC_PPM_array2ppm"
-
-external void writeStream(File &stream, Color8[.,.] image,
-                          int[2] shp, bool binary);
-    #pragma effect FileSystem::TheFileSystem
-    #pragma linkobj "src/PPM/array2ppm.o"
-    #pragma linkname "SAC_PPM_array2ppm"
+/*******************************************************************************
+ *
+ * readPPM
+ *
+ ******************************************************************************/
 
 inline Color8[.,.] readPPM()
 {
-    return readStream(stdin);
+    return readPPMf(stdin, "stdin");
 }
 
 inline Color8[.,.] readPPM(string name)
@@ -48,25 +26,170 @@ inline Color8[.,.] readPPM(string name)
             name);
     }
 
-    ret = readStream(fp);
+    ret = readPPMf(fp, name);
     fclose(fp);
     return(ret);
 }
 
-inline void printPPM(Color8[2:shp] img)
-{
-    writeStream(stdout, img, shp, false);
+#define READ_LINE_F(TF)                                    \
+string fgetLine (TF &fp, string name)                      \
+{                                                          \
+    err, line = fgetl (fp);                                \
+    if (SysErr::fail(err)) {                               \
+        RuntimeError::error((int)err,                      \
+            "Error when trying to read a line from %s",    \
+            name);                                         \
+    }                                                      \
+    return line;                                           \
 }
 
-inline void printPPM(Color8[2:shp] img, string name, bool binary)
+READ_LINE_F(File)
+
+READ_LINE_F(TermFile)
+
+
+
+
+#define READ_PPM_F(TF)                                      \
+Color8[h,w] readPPMf (TF &fp, string name)                  \
+{                                                           \
+    int c, h, w, max;                                       \
+    /*                                                      \
+     * Check for a valid header                             \
+     */                                                     \
+    line = fgetLine (fp, name);                             \
+    if ( (strsel (line, 0) != 'P')                          \
+         ||  ((strsel (line, 1) != '3')                     \
+              && (strsel (line, 1) != '6')) ) {             \
+        RuntimeError::error(0,                              \
+            "Neither header P3 nor P6 found. Not a .ppm file"); \
+    }                                                       \
+    binary = (strsel (line, 1) == '6');                     \
+                                                            \
+    /*                                                      \
+     * Check for comment (and ignore it)                    \
+     */                                                     \
+    comment = true;                                         \
+    while (comment) {                                       \
+        line = fgetLine (fp, name);                         \
+        comment = (strsel (line, 0) == '#');                \
+    }                                                       \
+                                                            \
+    /*                                                      \
+     * Get the dimensions of the image                      \
+     * and allocate an array of sufficient size             \
+     */                                                     \
+    num_read, w, h = sscanf (line, "%d %d");                \
+    if (num_read != 2)                                      \
+         RuntimeError::error(0,                             \
+            "Failed to read width and height of the image");\
+    data = genarray ([w,h,3], 0);                           \
+                                                            \
+    /*                                                      \
+     * Read out the maximum value                           \
+     */                                                     \
+    line = fgetLine (fp, name);                             \
+    num_read, max = sscanf (line, "%d");                    \
+    if (num_read != 1)                                      \
+         RuntimeError::error(0,                             \
+            "Failed to read max value of the image");       \
+                                                            \
+    /*                                                      \
+     * Readout the image                                    \
+     */                                                     \
+    for (i = 0; i < h; i++) {                               \
+        for (j = 0; j < w; j++) {                           \
+            for (k = 0; k < 3; k++) {                       \
+                if (binary)                                 \
+                    c = toi (fgetc (fp));                   \
+                else                                        \
+                    num, c = fscanf (fp, "%d");             \
+                data[i,j,k] = c * (255/max);                \
+            }                                               \
+        }                                                   \
+    }                                                       \
+    cols = {[i,j] -> newColor (data[i,j]) | [i,j] < [h,w]}; \
+    return cols;                                            \
+}
+
+READ_PPM_F( File)
+
+READ_PPM_F( TermFile)
+
+/*******************************************************************************
+ *
+ * writePPM
+ *
+ ******************************************************************************/
+
+void writePPM (Color8[2:shp] img)
+{
+    writePPMf (stdout, img, false);
+}
+
+
+void writePPM (Color8[2:shp] img, string name, bool binary)
 {
     err, fp = fopen(name, "w+");
-    if (SysErr::fail(err)) {
+    if (SysErr::fail (err)) {
         RuntimeError::error((int)err,
             "Error occured when trying to open file %s for writing",
             name);
     }
 
-    writeStream(fp, img, shp, binary);
-    fclose(fp);
+    writePPMf (fp, img, binary);
+    fclose (fp);
 }
+
+
+#define WRITE_PPM_F( TF)                                    \
+void writePPMf (TF &fp, Color8[h,w] img, bool binary)       \
+{                                                           \
+  if ( binary == false) {                                   \
+    /*                                                      \
+     * ASCII output                                         \
+     */                                                     \
+    fprintf(fp, "P3\n");                                    \
+                                                            \
+    fprintf(fp, "%d %d\n", w, h);                           \
+    fprintf(fp, "255\n");                                   \
+                                                            \
+    for(i = 0; i < h; i++) {                                \
+      for (j = 0; j < w; j++) {                             \
+        fprintf(fp, "%d %d %d", toi (img[i,j])[0],          \
+                                toi (img[i,j])[1],          \
+                                toi (img[i,j])[2]);         \
+                                                            \
+        if (j != w-1) {                                     \
+          fprintf(fp, " ");                                 \
+        }                                                   \
+      }                                                     \
+      fprintf(fp, "\n");                                    \
+    }                                                       \
+                                                            \
+  }                                                         \
+  else {                                                    \
+    /*                                                      \
+     * Binary output                                        \
+     */                                                     \
+    fprintf(fp, "P6\n");                                    \
+                                                            \
+    fprintf(fp, "%d %d\n", w, h);                           \
+    fprintf(fp, "255\n");                                   \
+                                                            \
+    for(i = 0; i < h; i++) {                                \
+      for (j = 0; j < w; j++) {                             \
+        fprintf(fp, "%c%c%c", tochar (toi (img[i,j])[0]),   \
+                              tochar (toi (img[i,j])[1]),   \
+                              tochar (toi (img[i,j])[2]));  \
+                                                            \
+      }                                                     \
+    }                                                       \
+  }                                                         \
+}
+
+WRITE_PPM_F(File)
+
+WRITE_PPM_F(TermFile)
+
+
